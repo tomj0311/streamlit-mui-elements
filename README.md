@@ -28,4 +28,4 @@ This project provides a comprehensive implementation of Material-UI components f
 All component callbacks are automatically stored in `st.session_state["events"]`. Individual component states can be accessed using their respective IDs:
 
 ## 🎥 Demo
-<img src="docs/assets/output.gif" alt="Demo of Material-UI Components" width="800"/>
+<img src="docs/assets/output.gif" alt="Demo of Material-UI Components" width="500"/>
