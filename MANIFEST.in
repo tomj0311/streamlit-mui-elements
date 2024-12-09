@@ -1,1 +1,1 @@
-recursive-include mui_elements/frontend/build *
+recursive-include stream_mui_elements/frontend/build *
