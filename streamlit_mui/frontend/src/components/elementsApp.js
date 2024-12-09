@@ -18,6 +18,21 @@ const loaders = {
   muiLab: loadMuiLab,
 };
 
+const EVENT_TYPES = {
+  CLICK: 'click',
+  CHANGE: 'change',
+  BLUR: 'blur',
+  AUTOCOMPLETE_CHANGE: 'autocomplete-change',
+  SELECT_CHANGE: 'select-change'
+};
+
+const createEventPayload = (key, type, value) => ({
+  key,
+  type,
+  value,
+  timestamp: Date.now()
+});
+
 const send = (data) => {
   try {
     // Sanitize the data before sending
@@ -55,24 +70,56 @@ const send = (data) => {
 };
 
 const handleEvent = (event, key, eventType) => {
-  // Regular input handling
-  let value;
-  if (event.target.type === 'checkbox') {
-    value = event.target.checked;
-  } else {
-    value = event.target.value;
+  try {
+    let value;
+    
+    // Handle different input types
+    switch (event?.target?.type) {
+      case 'checkbox':
+        value = event.target.checked;
+        break;
+      case 'radio':
+        value = event.target.value;
+        break;
+      case 'button':
+        value = 'clicked';
+        break;
+      default:
+        value = event?.target?.value;
+    }
+
+    send(createEventPayload(key, eventType, value));
+  } catch (error) {
+    console.error('Event handling error:', error);
+    send(createEventPayload(key, 'error', error.message));
+  }
+};
+
+const createEventHandlers = (id, type) => {
+  const handlers = {};
+
+  if (!id) return handlers;
+
+  switch (type) {
+    case 'Autocomplete':
+      handlers.onChange = (event, value, selectionData) => {
+        send(createEventPayload(id, EVENT_TYPES.AUTOCOMPLETE_CHANGE, selectionData));
+      };
+      break;
+    
+    case 'Select':
+      handlers.onChange = (event, selectionData) => {
+        send(createEventPayload(id, EVENT_TYPES.SELECT_CHANGE, selectionData));
+      };
+      break;
+    
+    default:
+      handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK);
+      handlers.onBlur = (e) => handleEvent(e, id, EVENT_TYPES.BLUR);
+      handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE);
   }
 
-  // Handle different event types
-  if (event.type === 'click' && event.target.type === 'button') {
-    send({ key, value: 'clicked' });
-  } else if (event.type === 'blur' && event.target.type === 'text') {
-    send({ key, value });
-  } else if (event.type === 'blur' && event.target.type === 'radio') {
-    send({ key, value });
-  } else if (event.type === 'change' && event.target.type !== 'text') {
-    send({ key, value });
-  }
+  return handlers;
 };
 
 const evaluateFunction = (funcString) => {
@@ -132,52 +179,18 @@ const renderElement = (node) => {
   const renderedChildren = children.map(convertNode);
   const finalProps = { ...convertNode(props) };
 
+  // Efficiently create event handlers
   if (finalProps.id) {
-    if (type === 'Autocomplete') {
-      const originalOnChange = finalProps.onChange;
-      finalProps.onChange = (event, value, selectionData) => {
-        send({
-          key: finalProps.id,
-          type: 'autocomplete-change',
-          value: selectionData
-        });
-
-        if (originalOnChange) {
-          originalOnChange(event, value, selectionData);
-        }
+    const eventHandlers = createEventHandlers(finalProps.id, type);
+    
+    // Preserve any existing handlers by creating wrapper functions
+    Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+      const originalHandler = finalProps[eventName];
+      finalProps[eventName] = (e, ...args) => {
+        handler(e, ...args);
+        if (originalHandler) originalHandler(e, ...args);
       };
-    } else if (type === 'Select') {
-      const originalOnChange = finalProps.onChange;
-      finalProps.onChange = (event, selectionData) => {
-        send({
-          key: finalProps.id,
-          type: 'select-change',
-          value: selectionData  
-        });
-
-        if (originalOnChange) {
-          originalOnChange(event, selectionData);
-        }
-      };
-    } else {
-      const originalOnClick = finalProps.onClick;
-      finalProps.onClick = (e) => {
-        handleEvent(e, finalProps.id, 'click');
-        if (originalOnClick) originalOnClick(e);
-      };
-
-      const originalOnBlur = finalProps.onBlur;
-      finalProps.onBlur = (e) => {
-        handleEvent(e, finalProps.id, 'blur');
-        if (originalOnBlur) originalOnBlur(e);
-      };
-
-      const originalOnChange = finalProps.onChange;
-      finalProps.onChange = (e) => {
-        handleEvent(e, finalProps.id, 'change');
-        if (originalOnChange) originalOnChange(e);
-      };
-    }
+    });
   }
 
   return jsx(LoadedElement, finalProps, ...renderedChildren);
