@@ -1,4 +1,4 @@
-from streamlit_mui.core.elements import new_element
+from streamlit_mui_elements.core.elements import new_element
 
 
 class MUIIcons:

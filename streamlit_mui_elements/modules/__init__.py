@@ -1,4 +1,4 @@
-from streamlit_mui.modules.mui import MUI, MUIIcons, MUILab, MUIx
+from streamlit_mui_elements.modules.mui import MUI, MUIIcons, MUILab, MUIx
 
 __all__ = [
     "mui",

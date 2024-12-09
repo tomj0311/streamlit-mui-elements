@@ -3,9 +3,9 @@ from contextlib import contextmanager
 import time
 from streamlit import session_state
 
-from streamlit_mui.core.exceptions import ElementsFrameError
-from streamlit_mui.core.element import Element
-from streamlit_mui.core.render import render_component
+from streamlit_mui_elements.core.exceptions import ElementsFrameError
+from streamlit_mui_elements.core.element import Element
+from streamlit_mui_elements.core.render import render_component
 
 ELEMENTS_FRAME_KEY = f"{__name__}.elements_frame"
 

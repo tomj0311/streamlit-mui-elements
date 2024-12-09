@@ -1,4 +1,4 @@
-from streamlit_mui import mui, elements
+from streamlit_mui_elements import mui, elements
 import streamlit as st
 
 with elements("key2"):

@@ -1,6 +1,6 @@
 from pathlib import Path
 from streamlit.components.v1 import declare_component
-from streamlit_mui import version
+from streamlit_mui_elements import version
 
 if version.__release__:
     ELEMENTS_FRONTEND = {"path": (Path(version.__file__).parent/"frontend/build").resolve()}

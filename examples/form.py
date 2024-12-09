@@ -1,4 +1,4 @@
-from streamlit_mui import mui, elements, lab, muix
+from streamlit_mui_elements import mui, elements, lab, muix
 import streamlit as st
 from datetime import datetime
 
