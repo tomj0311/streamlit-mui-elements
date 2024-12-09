@@ -1,30 +1,34 @@
 # Streamlit Material-UI Form Example
 
-This repository demonstrates how to create a beautiful and comprehensive registration form using Streamlit with Material-UI styling components, inspired by [streamlit-elements](https://github.com/okld/streamlit-elements) by okld.
+This repository demonstrates how to create beautiful Material-UI components in Streamlit applications, inspired by [streamlit-elements](https://github.com/okld/streamlit-elements) by okld.
 
 ## 📝 Description
 
-This project showcases a professional user registration form built with Streamlit-MUI components, leveraging the powerful Material-UI integration approach pioneered by streamlit-elements. The form includes a variety of Material-UI elements such as text fields, chips, radio buttons, sliders, and more, demonstrating the full potential of Material Design in Streamlit applications.
+This project provides a comprehensive implementation of Material-UI components for Streamlit, building upon the integration approach pioneered by streamlit-elements. It includes a wide range of Material-UI elements with full callback support, making it easier to create sophisticated web interfaces within Streamlit applications.
 
 ## 🚀 Features
 
-- Material Design components including:
+- Comprehensive Material Design components including:
   - Text input fields
-  - Role selection chips
-  - Skills autocomplete with multiple selection
-  - Radio button groups for gender selection
-  - Experience level slider
-  - Checkbox groups for notifications
+  - Selection chips
+  - Autocomplete with multiple selection
+  - Radio button groups
+  - Sliders
+  - Checkbox groups
   - Rating component
-  - Department selection dropdown
-  - Terms and conditions switch
-  - Styled submit button
+  - Dropdowns
+  - Switches
+  - Styled buttons
 - Organized layout with cards and dividers
-- Form validation
-- Responsive design
-- Interactive components
+- Full callback support for all components
+- State management through session state
 
-## 💻 Usage
+## 💡 How It Works
 
-1. Install the required dependencies:
+All component callbacks are automatically stored in `st.session_state["events"]`. Individual component states can be accessed using their respective IDs:
 
+## 🎥 Demo
+![Demo of Material-UI Components](docs/assets/demo.gif)
+
+## 🎥 Demo
+<img src="docs/assets/demo.gif" alt="Demo of Material-UI Components" width="800"/>
