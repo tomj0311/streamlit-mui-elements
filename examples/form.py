@@ -53,9 +53,9 @@ with elements("key2"):
         mui.Divider(id="gender-divider", sx={"marginY": "20px"})
         mui.Typography("Gender:", variant="subtitle1", sx={"marginBottom": "10px"})
         with mui.RadioGroup(defaultValue="female", id="gender", sx={"marginBottom": "15px"}):
-            mui.FormControlLabel(id="gender-female", value="female", control=mui.Radio(), label="Female")
-            mui.FormControlLabel(id="gender-male", value="male", control=mui.Radio(), label="Male")
-            mui.FormControlLabel(id="gender-other", value="other", control=mui.Radio(), label="Other")
+            mui.FormControlLabel(value="female", control=mui.Radio(), label="Female")
+            mui.FormControlLabel(value="male", control=mui.Radio(), label="Male")
+            mui.FormControlLabel(value="other", control=mui.Radio(), label="Other")
 
         # Experience level using Slider
         mui.Typography("Years of Experience:", variant="subtitle1")
@@ -112,5 +112,6 @@ with elements("key2"):
         # Submit button
         mui.Button("Submit", id="submit-button", variant="contained", color="primary", sx={"marginTop": "20px", "marginBottom": "10px", "float": "right"})
 
+st.code("st.session_state.get('events')['id] holds data from each frontend element.")
 if st.session_state.get("events"):
     st.write(st.session_state["events"])
