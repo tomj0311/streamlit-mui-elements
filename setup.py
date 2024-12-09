@@ -22,11 +22,6 @@ setuptools.setup(
     extras_require={
         "devel": [
             "wheel",
-            "pytest==7.4.0",
-            "playwright==1.48.0",
-            "requests==2.31.0",
-            "pytest-playwright-snapshot==1.0",
-            "pytest-rerunfailures==12.0",
         ]
     }
 )
