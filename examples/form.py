@@ -112,6 +112,6 @@ with elements("key2"):
         # Submit button
         mui.Button("Submit", id="submit-button", variant="contained", color="primary", sx={"marginTop": "20px", "marginBottom": "10px", "float": "right"})
 
-st.code("st.session_state.get('events')['id] holds data from each frontend element.")
+st.code("st.session_state.get('events')['id'] holds data from each frontend element.")
 if st.session_state.get("events"):
     st.write(st.session_state["events"])
