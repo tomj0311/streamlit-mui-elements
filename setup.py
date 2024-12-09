@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="streamlit-mui",
+    name="streamlit-mui-elements",
     version="0.0.1",
     author="Tom Jose",
     author_email="tomj0311@gmail.com",
