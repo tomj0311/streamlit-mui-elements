@@ -29,6 +29,8 @@ Dive into a comprehensive implementation of Material-UI components for Streamlit
 
 All component callbacks are automatically stored in `st.session_state["events"]`. Access individual component states using their respective IDs with ease.
 
+If id="some_id" is not mentioned for a component it's events won'be be captured.
+
 ## 🎥 Demo
 
 Check out the demo below to see the Material-UI components in action!
