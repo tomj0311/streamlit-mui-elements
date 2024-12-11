@@ -7,8 +7,8 @@ import streamlit as st
 
 with elements("key2"):
     with mui.Grid(container=True, spacing=2):
-        for i in range(4):  # Adjust the range for the number of cards you want
-            with mui.Grid(item=True, xs=12, sm=6, md=4, lg=3):
+        for _ in range(4):
+            with mui.Grid(item=True, xs=12, sm=6, md=3):
                 with mui.Card(
                     sx={
                         "display": "flex",
@@ -19,7 +19,7 @@ with elements("key2"):
                     elevation=1
                 ):
                     mui.CardHeader(
-                        title=f"Shrimp and Chorizo Paella {i+1}",
+                        title="Shrimp and Chorizo Paella",
                         subheader="September 14, 2016",
                         avatar=mui.Avatar("R", sx={"bgcolor": "red"}),
                         action=mui.IconButton(mui.icon.MoreVert),
