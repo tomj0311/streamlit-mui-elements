@@ -1,100 +1,25 @@
 import React, { lazy, Suspense } from "react";
 import ElementsLoading from "../../elementsLoading";
+import { PlotComponent, createAutocompleteComponent, createSelectComponent } from "./CustomElements";
 
-// Utility function for dynamic imports with lazy and suspense
 const dynamicImport = (importFn, componentName) => {
   const Component = lazy(() => {
-    // Special handling for Autocomplete and Select
+    if (componentName === 'Plot' || componentName === 'plot') {
+      return Promise.resolve({ default: PlotComponent });
+    }
+
     if (componentName === 'Autocomplete') {
       return importFn().then(module => ({
-        default: props => {
-          const {
-            onChange,
-            options = [],
-            value,
-            ...rest
-          } = props;
-
-          const handleChange = (event, newValue) => {
-            const selectedIndices = Array.isArray(newValue) 
-              ? newValue.map(v => options.findIndex(opt => 
-                  typeof opt === 'object' ? opt.value === v.value : opt === v
-                ))
-              : newValue ? [options.findIndex(opt => 
-                  typeof opt === 'object' ? opt.value === newValue.value : opt === newValue
-                )] : [];
-
-            const selectionData = {
-              selected: newValue,
-              selectedIndices,
-              totalSelected: Array.isArray(newValue) ? newValue.length : (newValue ? 1 : 0)
-            };
-
-            // Only call original onChange with the selection data
-            if (onChange) {
-              onChange(event, newValue, selectionData);
-            }
-          };
-
-          return React.createElement(module.default, {
-            ...rest,
-            options,
-            value,
-            onChange: handleChange,
-            getOptionLabel: (option) => {
-              if (option == null) return '';
-              if (typeof option === 'object' && option.label) return option.label;
-              return String(option);
-            },
-            isOptionEqualToValue: (option, value) => {
-              if (!option || !value) return false;
-              if (option === value) return true;
-              if (typeof option === 'object' && typeof value === 'object') {
-                return option.value === value.value;
-              }
-              return false;
-            }
-          });
-        }
+        default: createAutocompleteComponent(module)
       }));
     } 
-    else if (componentName === 'Select') {
+    
+    if (componentName === 'Select') {
       return importFn().then(module => ({
-        default: props => {
-          const {
-            onChange,
-            options = [],
-            value,
-            children,
-            ...rest
-          } = props;
-
-          const handleChange = (event) => {
-            const selectedValue = event.target.value;
-            const selectedOption = React.Children.toArray(children)
-              .find(child => child.props.value === selectedValue);
-
-            const selectionData = {
-              value: selectedValue,
-              option: selectedOption?.props?.id || '',
-              label: selectedOption?.props?.children || selectedValue
-            };
-
-            // Call original onChange with the formatted selection data
-            if (onChange) {
-              onChange(event, selectionData);
-            }
-          };
-
-          return React.createElement(module.default, {
-            ...rest,
-            value,
-            onChange: handleChange,
-            children
-          });
-        }
+        default: createSelectComponent(module)
       }));
     }
+
     return importFn();
   });
 
@@ -211,6 +136,7 @@ const mui = {
   Toolbar: dynamicImport(() => import("@mui/material/Toolbar")),
   Tooltip: dynamicImport(() => import("@mui/material/Tooltip")),
   Typography: dynamicImport(() => import("@mui/material/Typography")),
+  Plot: dynamicImport(() => Promise.resolve(), "Plot"), // Use uppercase Plot
 };
 
 // Combined Elements

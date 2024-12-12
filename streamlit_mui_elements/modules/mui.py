@@ -34,7 +34,7 @@ class MUIx:
 class MUI:
     """MUI Elements (https://mui.com)"""
 
-    __slots__ = ("_icon", "_lab")
+    __slots__ = ("_icon", "_lab")  # Remove _plot from slots since we're not using it
 
     def __init__(self):
         self._icon = MUIIcons()
