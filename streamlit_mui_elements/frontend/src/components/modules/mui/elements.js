@@ -1,6 +1,8 @@
 import React, { lazy, Suspense } from "react";
 import ElementsLoading from "../../elementsLoading";
-import { PlotComponent, createAutocompleteComponent, createSelectComponent } from "./CustomElements";
+import { PlotComponent } from "../plot/plotly";
+import { createAutocompleteComponent, createSelectComponent } from "./customElements";
+import { dataGridComponents } from "./customDataGrid";
 
 const dynamicImport = (importFn, componentName) => {
   const Component = lazy(() => {
@@ -139,9 +141,16 @@ const mui = {
   Plot: dynamicImport(() => Promise.resolve(), "Plot"), // Use uppercase Plot
 };
 
+// Use dataGridComponents to create the dataGrid object
+const dataGrid = Object.entries(dataGridComponents).reduce((acc, [key, componentFn]) => {
+  acc[key] = componentFn(dynamicImport);
+  return acc;
+}, {});
+
 // Combined Elements
 const elements = {
   ...mui,
+  ...dataGrid
 };
 
 const loadMuiElements = (element) => {

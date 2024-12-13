@@ -23,7 +23,8 @@ const EVENT_TYPES = {
   CHANGE: 'change',
   BLUR: 'blur',
   AUTOCOMPLETE_CHANGE: 'autocomplete-change',
-  SELECT_CHANGE: 'select-change'
+  SELECT_CHANGE: 'select-change',
+  FILE_CHANGE: 'file-change'  // Add new event type
 };
 
 const createEventPayload = (key, type, value) => ({
@@ -95,7 +96,56 @@ const handleEvent = (event, key, eventType) => {
   }
 };
 
-const createEventHandlers = (id, type) => {
+const handleFileEvent = async (event, key) => {
+  try {
+    if (!event?.target?.files?.length) {
+      return;
+    }
+
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    
+    return new Promise((resolve) => {
+      reader.onload = async () => {
+        // Create file data payload
+        let file_data = {
+          key: key,
+          type: EVENT_TYPES.FILE_CHANGE,
+          value: {
+            result: reader.result,
+            name: file.name,
+            type: file.type,
+            size: file.size
+          },
+          timestamp: Date.now()
+        };
+
+        // Send first time
+        send(file_data);
+        
+        // Wait a small amount of time
+        await new Promise(r => setTimeout(r, 100));
+        
+        // Send second time with new timestamp
+        file_data.timestamp = Date.now();
+        send(file_data);
+        
+        resolve();
+      };
+
+      reader.onerror = () => {
+        console.error('Error reading file');
+        resolve();
+      };
+
+      reader.readAsDataURL(file);
+    });
+  } catch (error) {
+    console.error('File handling error:', error);
+  }
+};
+
+const createEventHandlers = (id, type, props) => {
   const handlers = {};
 
   if (!id) return handlers;
@@ -111,6 +161,29 @@ const createEventHandlers = (id, type) => {
       handlers.onChange = (event, selectionData) => {
         send(createEventPayload(id, EVENT_TYPES.SELECT_CHANGE, selectionData));
       };
+      break;
+
+    case 'Input':
+      if (props?.type === 'file') {
+        // Special handling for file inputs to prevent double triggers
+        handlers.onChange = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (e?.target?.files?.length) {
+            // Don't send click event, only handle file
+            await handleFileEvent(e, id);
+            e.target.value = '';
+          }
+        };
+        // Remove other handlers for file input
+        handlers.onClick = (e) => {
+          e.stopPropagation();
+        };
+      } else {
+        handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE);
+        handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK);
+      }
       break;
     
     default:
@@ -179,17 +252,19 @@ const renderElement = (node) => {
   const renderedChildren = children.map(convertNode);
   const finalProps = { ...convertNode(props) };
 
-  // Efficiently create event handlers
+  // Special handling for file inputs
+  if (type === 'Input' && finalProps.type === 'file') {
+    finalProps.key = `file-input-${Date.now()}`;
+    // Prevent any default click behavior
+    finalProps.onClick = (e) => e.stopPropagation();
+  }
+
   if (finalProps.id) {
-    const eventHandlers = createEventHandlers(finalProps.id, type);
-    
-    // Preserve any existing handlers by creating wrapper functions
+    const eventHandlers = createEventHandlers(finalProps.id, type, finalProps);
     Object.entries(eventHandlers).forEach(([eventName, handler]) => {
-      const originalHandler = finalProps[eventName];
-      finalProps[eventName] = (e, ...args) => {
-        handler(e, ...args);
-        if (originalHandler) originalHandler(e, ...args);
-      };
+      if (handler) {
+        finalProps[eventName] = handler;  // Direct assignment instead of wrapper
+      }
     });
   }
 
@@ -208,14 +283,6 @@ const ElementsApp = ({ args, theme }) => {
         send({ error: `Failed to parse JSON: ${error.message}` });
       }
     }
-
-    Mousetrap.bind("r", () => {
-      send({});
-    });
-
-    return () => {
-      Mousetrap.unbind("r");
-    };
   }, [args.data]);
 
   return (

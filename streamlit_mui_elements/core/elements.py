@@ -1,7 +1,7 @@
 import json
 from contextlib import contextmanager
 import time
-from streamlit import session_state
+from streamlit import session_state, rerun
 
 from streamlit_mui_elements.core.exceptions import ElementsFrameError
 from streamlit_mui_elements.core.element import Element
@@ -32,16 +32,19 @@ def new_frame(key):
         if ui_tree:
             ui_description = json.dumps(ui_tree)
             _component = render_component(data=ui_description, key=key, default=0)
+
             if _component != 0:
                 event_key = _component.get('key', '')
                 value = _component.get('value', '')
                 timestamp = _component.get('timestamp', 0)
+                event_type = _component.get('type', '')  # Get event type
 
                 if event_key == '':
                     event_key = 'undefined'
 
                 session_state["events"] = session_state.get("events", {})
                 session_state["events"][event_key] = {"value": value, "timestamp": timestamp}
+                
     finally:
         del session_state[ELEMENTS_FRAME_KEY]
 

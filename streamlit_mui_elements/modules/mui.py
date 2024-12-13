@@ -21,16 +21,6 @@ class MUILab:
         return new_element("muiLab", element)
     
 
-class MUIx:
-    """MUI x (https://mui.com/x)"""
-
-    def __getattr__(self, element):
-        return new_element("muix", element)
-
-    def __getitem__(self, element):
-        return new_element("muix", element)
-
-
 class MUI:
     """MUI Elements (https://mui.com)"""
 
