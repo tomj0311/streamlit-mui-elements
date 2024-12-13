@@ -2,8 +2,44 @@ import React from 'react';
 
 export const createDataGridComponent = (module) => {
   return (props) => {
+    // Extract server-side related props
+    const {
+      filterMode,
+      sortingMode,
+      paginationMode,
+      onFilterModelChange,
+      onSortModelChange,
+      onPaginationModelChange,
+      rowCount: providedRowCount,
+      ...otherProps
+    } = props;
+
+    const isServerPagination = onPaginationModelChange ? 'server' : 'client';
+    
+    // Calculate rowCount - if server pagination, rowCount is required
+    const rowCount = isServerPagination === 'server' 
+      ? (providedRowCount || 0)  // Provide default value for server mode
+      : (otherProps.rows || []).length;  // Use rows length for client mode
+
     const finalProps = {
-      ...props,
+      ...otherProps,
+      // Enable server-side features if handlers are provided
+      filterMode: onFilterModelChange ? 'server' : 'client',
+      sortingMode: onSortModelChange ? 'server' : 'client',
+      paginationMode: isServerPagination,
+      rowCount, // Add rowCount to props
+      // Pass through the handlers
+      onFilterModelChange,
+      onSortModelChange,
+      onPaginationModelChange,
+      // Default pagination settings
+      initialState: {
+        ...otherProps.initialState,
+        pagination: {
+          paginationModel: { pageSize: 25, page: 0 },
+          ...otherProps.initialState?.pagination,
+        },
+      },
       autoHeight: false,
       style: {
         height: props.height || 500,
@@ -43,6 +79,7 @@ export const createDataGridComponent = (module) => {
         },
       }
     };
+
     return React.createElement(module.DataGrid, finalProps);
   };
 };

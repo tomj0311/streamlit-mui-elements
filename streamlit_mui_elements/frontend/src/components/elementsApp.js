@@ -24,7 +24,10 @@ const EVENT_TYPES = {
   BLUR: 'blur',
   AUTOCOMPLETE_CHANGE: 'autocomplete-change',
   SELECT_CHANGE: 'select-change',
-  FILE_CHANGE: 'file-change'  // Add new event type
+  FILE_CHANGE: 'file-change',  // Add new event type
+  FILTER_CHANGE: 'filter-change',
+  SORT_CHANGE: 'sort-change',
+  PAGINATION_CHANGE: 'pagination-change'
 };
 
 const createEventPayload = (key, type, value) => ({
@@ -90,6 +93,7 @@ const handleEvent = (event, key, eventType) => {
     }
 
     send(createEventPayload(key, eventType, value));
+
   } catch (error) {
     console.error('Event handling error:', error);
     send(createEventPayload(key, 'error', error.message));
@@ -186,6 +190,22 @@ const createEventHandlers = (id, type, props) => {
       }
       break;
     
+    case 'DataGrid':
+      // Always attach handlers for DataGrid
+      handlers.onFilterModelChange = (filterModel) => {
+        send(createEventPayload(id, EVENT_TYPES.FILTER_CHANGE, filterModel));
+      };
+      
+      handlers.onSortModelChange = (sortModel) => {
+        send(createEventPayload(id, EVENT_TYPES.SORT_CHANGE, sortModel));
+      };
+      
+      handlers.onPaginationModelChange = (paginationModel) => {
+        send(createEventPayload(id, EVENT_TYPES.PAGINATION_CHANGE, paginationModel));
+      };
+
+      break;
+
     default:
       handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK);
       handlers.onBlur = (e) => handleEvent(e, id, EVENT_TYPES.BLUR);
@@ -261,11 +281,24 @@ const renderElement = (node) => {
 
   if (finalProps.id) {
     const eventHandlers = createEventHandlers(finalProps.id, type, finalProps);
-    Object.entries(eventHandlers).forEach(([eventName, handler]) => {
-      if (handler) {
-        finalProps[eventName] = handler;  // Direct assignment instead of wrapper
-      }
-    });
+    // For DataGrid, ensure we preserve any existing props
+    if (type === 'DataGrid') {
+      finalProps.components = {
+        ...finalProps.components,
+      };
+      // Merge handlers with existing props instead of overwriting
+      Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+        if (handler) {
+          const existingHandler = finalProps[eventName];
+          finalProps[eventName] = (...args) => {
+            if (existingHandler) existingHandler(...args);
+            handler(...args);
+          };
+        }
+      });
+    } else {
+      Object.assign(finalProps, eventHandlers);
+    }
   }
 
   return jsx(LoadedElement, finalProps, ...renderedChildren);

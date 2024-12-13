@@ -430,29 +430,39 @@ def datagridcard():
             if st.session_state.df is not None:
                 df = st.session_state.df
                 
-                # Convert DataFrame to rows format
+                # Convert DataFrame to rows forma
                 rows = df.to_dict('records')
                 for i, row in enumerate(rows):
                     row['id'] = i
 
-                # Create columns configuration
+                # Create columns configuration with types
                 columns = [
-                    {'field': 'id', 'headerName': 'ID', 'width': 90},
-                    *[{'field': col, 'headerName': col.title(), 'width': 150} 
-                      for col in df.columns]
+                    {'field': 'id', 'headerName': 'ID', 'width': 50, 'type': 'number'},
                 ]
+                
+                for col in df.columns:
+                    column_def = {
+                        'field': col, 
+                        'headerName': col.title(), 
+                        'width': 100
+                    }
+                    
+                    # Set column type based on dtype
+                    if pd.api.types.is_numeric_dtype(df[col].dtype):
+                        column_def['type'] = 'number'
+                    elif pd.api.types.is_datetime64_any_dtype(df[col].dtype):
+                        column_def['type'] = 'dateTime'
+                    elif pd.api.types.is_bool_dtype(df[col].dtype):
+                        column_def['type'] = 'boolean'
+                        
+                    columns.append(column_def)
 
                 with mui.Box:
                     mui.DataGrid(
+                        id="my-grid",
                         rows=rows,
                         columns=columns,
-                        pageSize=5,
-                        rowsPerPageOptions=[5],
-                        checkboxSelection=True,
-                        disableSelectionOnClick=True,
-                        sx={
-                            "border": "none",  # Remove border if you want a cleaner look
-                        }
+                        filterMode="server"
                     )
             else:
                 mui.Typography(
