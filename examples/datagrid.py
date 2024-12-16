@@ -152,27 +152,28 @@ def datagrid():
     if file_event:
         try:
             file_info = file_event.get('value', {})
-            current_filename = file_info.get('name')
-            # Only process if it's a new file and we haven't processed it already
-            if (current_filename != st.session_state.last_processed_file and 
-                not st.session_state.get('_file_processed')):
-                file_content = file_info.get('result', None)
+            if file_info:
+                current_filename = file_info.get('name')
+                # Only process if it's a new file and we haven't processed it already
+                if (current_filename != st.session_state.last_processed_file and 
+                    not st.session_state.get('_file_processed')):
+                    file_content = file_info.get('result', None)
 
-                if file_content:
-                    import base64
-                    content = base64.b64decode(file_content.split(',')[1])
-                    
-                    # Clear previous dataframe first
-                    st.session_state.df = None
-                    gc.collect()
-                    
-                    # Load new dataframe
-                    st.session_state.df = pd.read_csv(io.BytesIO(content))
-                    st.session_state.last_processed_file = current_filename
+                    if file_content:
+                        import base64
+                        content = base64.b64decode(file_content.split(',')[1])
+                        
+                        # Clear previous dataframe first
+                        st.session_state.df = None
+                        gc.collect()
+                        
+                        # Load new dataframe
+                        st.session_state.df = pd.read_csv(io.BytesIO(content))
+                        st.session_state.last_processed_file = current_filename
 
-                    # Clean up
-                    del content
-                    gc.collect()
+                        # Clean up
+                        del content
+                        gc.collect()
                 
         except Exception as e:
             st.error(f"Error reading file: {str(e)}")

@@ -27,6 +27,8 @@ class ElementsManager:
                 ui_tree = self.frame.to_dict()
                 if ui_tree:
                     self._handle_component(ui_tree)
+        except Exception as e:
+            raise e
         finally:
             if ELEMENTS_FRAME_KEY in session_state:
                 del session_state[ELEMENTS_FRAME_KEY]
@@ -47,19 +49,22 @@ class ElementsManager:
                     self._trigger_rerun(event_key, timestamp)
     
     def _update_event_state(self, event_key, value, timestamp, event_type):
-        if "events" not in session_state:
-            session_state.events = {}
-        
-        if session_state.events.get(event_key, {}).get('timestamp') == timestamp:
-            # Only in case of larage files
-            if session_state.events[event_key]["type"] == "file-change": 
-                session_state.events[event_key]["value"] = "processed"
-        else:
-            session_state.events[event_key] = {
-                "value": value,
-                "timestamp": timestamp,
-                "type": event_type
-            }
+        try:
+            if "events" not in session_state:
+                session_state.events = {}
+            
+            if session_state.events.get(event_key, {}).get('timestamp') == timestamp:
+                # Only in case of larage files
+                if session_state.events[event_key]["type"] == "file-change": 
+                    session_state.events[event_key]["value"]["result"] = None
+            else:
+                session_state.events[event_key] = {
+                    "value": value,
+                    "timestamp": timestamp,
+                    "type": event_type
+                }
+        except Exception as e:
+            print(f"Error updating event state: {str(e)}")
     
     def _should_rerun(self, event_type, event_key, timestamp):
         if not event_type or event_type not in RERUN_EVENT_TYPES:
