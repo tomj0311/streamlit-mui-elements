@@ -158,9 +158,6 @@ def datagrid():
                 not st.session_state.get('_file_processed')):
                 file_content = file_info.get('result', None)
 
-                # important! avoid handling issues with large files
-                st.session_state.events['csv_upload']['value']['result'] = None
-                
                 if file_content:
                     import base64
                     content = base64.b64decode(file_content.split(',')[1])

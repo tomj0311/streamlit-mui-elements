@@ -1,5 +1,4 @@
 import json
-from contextlib import contextmanager
 import time
 from streamlit import session_state, rerun
 
@@ -8,89 +7,89 @@ from streamlit_mui_elements.core.element import Element
 from streamlit_mui_elements.core.render import render_component
 
 ELEMENTS_FRAME_KEY = f"{__name__}.elements_frame"
-RERUN_COOLDOWN = 0.1  # Minimum time between reruns in seconds
+RERUN_COOLDOWN = 0.1
 RERUN_EVENT_TYPES = {'file-change', 'filter-change', 'sort-change', 'pagination-change', 'selection-change'}
 
-def should_rerun(event_type, event_key, timestamp):
-    """Determine if app should rerun based on event type, timing, and prevent duplicate reruns"""
-    print(f"Checking rerun for event type: {event_type}")  # Debug log
-    if not event_type or event_type not in RERUN_EVENT_TYPES:
-        print(f"Event type {event_type} not in {RERUN_EVENT_TYPES}")  # Debug log
-        return False
+class ElementsManager:
+    def __init__(self, key):
+        self.key = f"{ELEMENTS_FRAME_KEY}.{key}"
+        self.frame = None
+    
+    def __enter__(self):
+        self.frame = ElementsFrame(self.key)
+        session_state[ELEMENTS_FRAME_KEY] = self.frame
+        self.frame.capture_children()
+        return self.frame
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self.frame:
+                ui_tree = self.frame.to_dict()
+                if ui_tree:
+                    self._handle_component(ui_tree)
+        finally:
+            if ELEMENTS_FRAME_KEY in session_state:
+                del session_state[ELEMENTS_FRAME_KEY]
+    
+    def _handle_component(self, ui_tree):
+        ui_description = json.dumps(ui_tree)
+        component = render_component(data=ui_description, key=self.key, default=None)
         
-    # Check if this event was already processed
-    last_event = session_state.get('_last_processed_event', {})
-    if (last_event.get('key') == event_key and 
-        last_event.get('timestamp') == timestamp):
-        return False
+        if component is not None and component != 0:
+            event_key = component.get('key')
+            value = component.get('value')
+            timestamp = component.get('timestamp')
+            event_type = component.get('type')
+            
+            if event_key and event_key != 'undefined':
+                self._update_event_state(event_key, value, timestamp, event_type)
+                if self._should_rerun(event_type, event_key, timestamp):
+                    self._trigger_rerun(event_key, timestamp)
+    
+    def _update_event_state(self, event_key, value, timestamp, event_type):
+        if "events" not in session_state:
+            session_state.events = {}
         
-    last_rerun = session_state.get('_last_rerun_time', 0)
-    current_time = time.time()
-    should = current_time - last_rerun >= RERUN_COOLDOWN
-    print(f"Should rerun based on cooldown: {should}")  # Debug log
-    return should
-
-def get_elements_frame():
-    if ELEMENTS_FRAME_KEY not in session_state:
-        raise ElementsFrameError("Frame was not created.")
-    return session_state[ELEMENTS_FRAME_KEY]
-
-@contextmanager
-def new_frame(key):
-    key = f"{ELEMENTS_FRAME_KEY}.{key}"
-    frame = ElementsFrame(key)
-    session_state[ELEMENTS_FRAME_KEY] = frame
-
-    frame.capture_children()
-
-    try:
-        yield
-        ui_tree = frame.to_dict()
-
-        if ui_tree:
-            ui_description = json.dumps(ui_tree)
-            component = render_component(data=ui_description, key=key, default=None)
-
-            if component is not None and component != 0:
-                event_key = component.get('key')
-                value = component.get('value')
-                timestamp = component.get('timestamp')
-                event_type = component.get('type')
-
-                print(f"Received event: type={event_type}, key={event_key}")  # Debug log
-
-                if event_key and event_key != 'undefined':
-                    # Update event state
-                    if "events" not in session_state:
-                        session_state.events = {}
-                    
-                    if session_state.events.get(event_key, {}).get('timestamp') == timestamp:
-                        print(f"Event {event_key} already processed")
-                    else:
-                        session_state.events[event_key] = {
-                            "value": value,
-                            "timestamp": timestamp,
-                            "type": event_type
-                        }
-
-                    if should_rerun(event_type, event_key, timestamp):
-                        # Store this event as the last processed one
-                        session_state._last_processed_event = {
-                            'key': event_key,
-                            'timestamp': timestamp
-                        }
-                        print(f"Triggering rerun for event type: {event_type}")  # Debug log
-                        session_state._last_rerun_time = time.time()
-                        rerun()
-    finally:
-        if ELEMENTS_FRAME_KEY in session_state:
-            del session_state[ELEMENTS_FRAME_KEY]
+        if session_state.events.get(event_key, {}).get('timestamp') == timestamp:
+            # Only in case of larage files
+            if session_state.events[event_key]["type"] == "file-change": 
+                session_state.events[event_key]["value"] = "processed"
+        else:
+            session_state.events[event_key] = {
+                "value": value,
+                "timestamp": timestamp,
+                "type": event_type
+            }
+    
+    def _should_rerun(self, event_type, event_key, timestamp):
+        if not event_type or event_type not in RERUN_EVENT_TYPES:
+            return False
+            
+        last_event = session_state.get('_last_processed_event', {})
+        if (last_event.get('key') == event_key and 
+            last_event.get('timestamp') == timestamp):
+            return False
+            
+        last_rerun = session_state.get('_last_rerun_time', 0)
+        return time.time() - last_rerun >= RERUN_COOLDOWN
+    
+    def _trigger_rerun(self, event_key, timestamp):
+        session_state._last_processed_event = {
+            'key': event_key,
+            'timestamp': timestamp
+        }
+        session_state._last_rerun_time = time.time()
+        rerun()
 
 def new_element(module, element):
     if ELEMENTS_FRAME_KEY not in session_state:
         raise ElementsFrameError("Cannot create element outside a frame.")
     return Element(session_state[ELEMENTS_FRAME_KEY], module, element)
 
+def get_elements_frame():
+    if ELEMENTS_FRAME_KEY not in session_state:
+        raise ElementsFrameError("Frame was not created.")
+    return session_state[ELEMENTS_FRAME_KEY]
 
 class ElementsFrame:
     __slots__ = ('_children', '_parents', '_key', '_is_saving')
