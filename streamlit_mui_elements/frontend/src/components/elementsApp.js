@@ -30,6 +30,38 @@ const EVENT_TYPES = {
   PAGINATION_CHANGE: 'pagination-change'
 };
 
+const sanitizeValue = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  
+  if (typeof value === 'function') {
+    return '[Function]';
+  }
+  
+  if (value instanceof File) {
+    return {
+      name: value.name,
+      type: value.type,
+      size: value.size
+    };
+  }
+  
+  if (Array.isArray(value)) {
+    return value.map(sanitizeValue);
+  }
+  
+  if (typeof value === 'object') {
+    const cleaned = {};
+    for (const [key, val] of Object.entries(value)) {
+      cleaned[key] = sanitizeValue(val);
+    }
+    return cleaned;
+  }
+  
+  return value;
+};
+
 const createEventPayload = (key, type, value) => ({
   key,
   type,
@@ -39,31 +71,17 @@ const createEventPayload = (key, type, value) => ({
 
 const send = (data) => {
   try {
-    // Sanitize the data before sending
-    const sanitizeValue = (value) => {
-      if (value === null || value === undefined) return null;
-      if (Array.isArray(value)) return value.map(sanitizeValue);
-      if (typeof value === 'object' && !React.isValidElement(value)) {
-        const clean = {};
-        for (const key in value) {
-          if (value[key] !== undefined && !React.isValidElement(value[key])) {
-            clean[key] = sanitizeValue(value[key]);
-          }
-        }
-        return clean;
-      }
-      return value;
-    };
-
     const sanitizedData = {
       ...data,
       value: sanitizeValue(data.value),
       timestamp: Date.now()
     };
-
-    // Final safety check
-    const cleanData = JSON.parse(JSON.stringify(sanitizedData));
-    Streamlit.setComponentValue(cleanData);
+    
+    // Queue microtask to ensure state is updated
+    queueMicrotask(() => {
+      Streamlit.setComponentValue(sanitizedData);
+    });
+    
   } catch (error) {
     console.error('Failed to serialize data:', error);
     Streamlit.setComponentValue({
@@ -102,50 +120,37 @@ const handleEvent = (event, key, eventType) => {
 
 const handleFileEvent = async (event, key) => {
   try {
-    if (!event?.target?.files?.length) {
-      return;
-    }
+    if (!event?.target?.files?.length) return;
 
     const file = event.target.files[0];
     const reader = new FileReader();
     
-    return new Promise((resolve) => {
-      reader.onload = async () => {
-        // Create file data payload
-        let file_data = {
-          key: key,
-          type: EVENT_TYPES.FILE_CHANGE,
-          value: {
-            result: reader.result,
-            name: file.name,
-            type: file.type,
-            size: file.size
-          },
-          timestamp: Date.now()
-        };
-
-        // Send first time
-        send(file_data);
-        
-        // Wait a small amount of time
-        await new Promise(r => setTimeout(r, 100));
-        
-        // Send second time with new timestamp
-        file_data.timestamp = Date.now();
-        send(file_data);
-        
-        resolve();
+    reader.onload = () => {
+      const fileData = {
+        key: key,
+        type: EVENT_TYPES.FILE_CHANGE,
+        value: {
+          result: reader.result,
+          name: file.name,
+          type: file.type,
+          size: file.size
+        },
+        timestamp: Date.now()
       };
+      
+      send(fileData);
+    };
 
-      reader.onerror = () => {
-        console.error('Error reading file');
-        resolve();
-      };
-
-      reader.readAsDataURL(file);
-    });
+    reader.readAsDataURL(file);
+    
   } catch (error) {
     console.error('File handling error:', error);
+    send({
+      key: key,
+      type: 'error',
+      value: error.message,
+      timestamp: Date.now()
+    });
   }
 };
 

@@ -11,6 +11,9 @@ export const createDataGridComponent = (module) => {
       onSortModelChange,
       onPaginationModelChange,
       rowCount: providedRowCount,
+      page = 0,
+      pageSize = 25,
+      pageSizeOptions = [25], // Add default value
       ...otherProps
     } = props;
 
@@ -27,18 +30,16 @@ export const createDataGridComponent = (module) => {
       filterMode: onFilterModelChange ? 'server' : 'client',
       sortingMode: onSortModelChange ? 'server' : 'client',
       paginationMode: isServerPagination,
+      pagination: true, // Add this line
       rowCount, // Add rowCount to props
       // Pass through the handlers
       onFilterModelChange,
       onSortModelChange,
       onPaginationModelChange,
-      // Default pagination settings
-      initialState: {
-        ...otherProps.initialState,
-        pagination: {
-          paginationModel: { pageSize: 25, page: 0 },
-          ...otherProps.initialState?.pagination,
-        },
+      pageSizeOptions, // Add this prop
+      paginationModel: {
+        page,
+        pageSize,
       },
       autoHeight: false,
       style: {

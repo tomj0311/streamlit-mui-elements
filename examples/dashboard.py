@@ -45,7 +45,7 @@ def earningcard():
                                     "height": 40,
                                 },
                                 # Add onClick event handler if needed
-                            )(mui.IconButton(mui.icon.MoreHoriz))
+                            )(mui.IconButton(mui.icon.MoreHoriz(id="icon1")))
                 # Second row with amount and icon
                 with mui.Grid(item=True):
                     with mui.Grid(container=True, alignItems="center"):
@@ -497,6 +497,9 @@ def dashboard():
             # Third row - DataGrid
             with mui.Grid(item=True, xs=12):
                 datagridcard()
+    
+    if st.session_state.get("events"):
+        print(st.session_state["events"])
 
 if __name__ == "__main__":
     dashboard()
