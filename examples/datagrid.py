@@ -1,7 +1,8 @@
 import gc
 import pandas as pd
 import streamlit as st
-from streamlit_mui_elements import mui, elements, data_grid, file_upload
+from streamlit_mui_elements import mui, elements, data_grid
+from streamlit_mui_elements.modules.file_upload import file_upload, handle_upload
 import io
 
 def datagrid():
@@ -17,7 +18,7 @@ def datagrid():
                 sx={"pb": 0}
             ):
                 # Handle file upload separately
-                df, filename = file_upload.handle_upload(key="csv_upload")
+                df, filename = handle_upload(key="csv_upload")  # Changed this line
                 st.session_state.df = df
                 gc.collect()
 
