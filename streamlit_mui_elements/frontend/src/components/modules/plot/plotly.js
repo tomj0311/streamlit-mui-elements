@@ -19,30 +19,29 @@ export const PlotComponent = ({ data, layout, config, ...rest }) => {
           family: theme.typography.fontFamily
         },
         margin: {
-          t: 10,  // Increase top margin
+          t: 10,
           r: 20,
           l: 40,
           b: 40
         },
-        dragmode: 'pan',  // Changed from 'zoom' to 'pan'
+        dragmode: 'pan',
         ...layout
       };
 
-      // Define an array of theme colors
-      const colors = [
-        theme.palette.primary.main,     // First trace
-        theme.palette.primary.light,    // Second trace
-        theme.palette.secondary.main,   // Third trace
-        theme.palette.secondary.light,  // Fourth trace
-        theme.palette.info.main,       // Fifth trace
-        theme.palette.info.light       // Sixth trace
+      // Generate colors using primary palette shades
+      const plotColors = [
+        theme.palette.primary[900],
+        theme.palette.primary[700],
+        theme.palette.primary[500],
+        theme.palette.primary[300],
+        theme.palette.primary[100],
+        theme.palette.primary.main,
       ];
 
-      // Modified themedData mapping
       const themedData = (data || []).map((trace, index) => ({
         ...trace,
         marker: {
-          color: colors[index % colors.length], // Cycle through colors
+          color: plotColors[index % plotColors.length],
           ...trace.marker
         }
       }));
@@ -69,12 +68,11 @@ export const PlotComponent = ({ data, layout, config, ...rest }) => {
     }
   }, [data, layout, config, isDark, theme]);
 
-  // Remove the modebar CSS styling since we're not using it anymore
   React.useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
       .js-plotly-plot .plotly {
-        margin-top: 0 !important;  /* Remove top margin since no modebar */
+        margin-top: 0 !important;
       }
     `;
     document.head.appendChild(style);

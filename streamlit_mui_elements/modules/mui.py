@@ -38,8 +38,18 @@ class MUI:
     def lab(self):
         return self._lab
 
+    def DataGrid(self, **kwargs):
+        """Convenience method for creating DataGrid component"""
+        return new_element("muiElements", "DataGrid")(**kwargs)
+
     def __getattr__(self, element):
         return new_element("muiElements", element)
 
     def __getitem__(self, element):
         return new_element("muiElements", element)
+
+# Create a single instance to be imported by other modules
+mui = MUI()
+
+# Export the mui instance
+__all__ = ['mui']
