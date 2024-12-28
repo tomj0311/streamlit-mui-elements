@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 from streamlit_mui_elements import mui, elements
-import plotly.graph_objects as go
 import io
 
 def earningcard():

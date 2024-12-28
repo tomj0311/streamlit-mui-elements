@@ -106,10 +106,8 @@ class ElementsFrame:
         self._is_saving = False
 
     def capture_children(self):
-        # print(f"Start capturing children. Current children: {self._children}")  # Debugging
         self._parents.append(self._children)
         self._children = []
-        # print(f"New context started. Parents stack: {self._parents}")  # Debugging
 
     def save_children(self, element):
         if self._is_saving:
@@ -122,14 +120,18 @@ class ElementsFrame:
         captured_children = self._children
         self._children = self._parents.pop()
 
-        # Only add non-prop children
-        filtered_children = [
-            child for child in captured_children 
-            if not child._is_prop and not child._parent
-        ]
-        element(*filtered_children)
+        # Only process children that haven't been added to a parent yet
+        filtered_children = []
+        for child in captured_children:
+            if not child._is_prop and not child._parent:
+                child._parent = element
+                filtered_children.append(child)
 
-        if not element._is_prop and element not in self._children:
+        if filtered_children:
+            element(*filtered_children)
+
+        # Only add the element if it's not a prop and doesn't have a parent
+        if not element._is_prop and not element._parent and element not in self._children:
             self._children.append(element)
 
         captured_children.clear()
@@ -140,5 +142,4 @@ class ElementsFrame:
 
     def to_dict(self):
         result = [child.to_dict() for child in self._children]
-        # print("UI Tree to_dict:", result)  # Debugging
         return result

@@ -1,9 +1,7 @@
 import gc
-import pandas as pd
 import streamlit as st
 from streamlit_mui_elements import mui, elements, data_grid
 from streamlit_mui_elements.modules.file_upload import file_upload, handle_upload
-import io
 
 def datagrid():
     # Initialize main session state variables

@@ -309,15 +309,64 @@ const renderElement = (node) => {
   return jsx(LoadedElement, finalProps, ...renderedChildren);
 };
 
+const preprocessJsonString = (jsonString) => {
+  try {
+    // First try to locate any NaN values
+    console.debug('Starting JSON preprocessing');
+    
+    // Convert standalone NaN values to null using multiple patterns
+    let processed = jsonString
+      // Handle key-value pairs with NaN
+      .replace(/"[^"]+"\s*:\s*NaN/g, match => match.replace(/NaN$/, 'null'))
+      // Handle array elements that are NaN
+      .replace(/,\s*NaN\s*,/g, ',null,')
+      // Handle NaN at start of array
+      .replace(/\[\s*NaN\s*,/g, '[null,')
+      // Handle NaN at end of array
+      .replace(/,\s*NaN\s*\]/g, ',null]')
+      // Handle single NaN in array
+      .replace(/\[\s*NaN\s*\]/g, '[null]')
+      // Handle any remaining NaN values
+      .replace(/:\s*NaN\b/g, ': null');
+
+    console.debug('Preprocessing complete');
+    return processed;
+  } catch (error) {
+    console.error('Error during preprocessing:', error);
+    throw error;
+  }
+};
+
 const ElementsApp = ({ args, theme }) => {
   const [uiTree, setUiTree] = useState([]);
 
   useEffect(() => {
     if (args.data) {
       try {
-        const parsedData = JSON.parse(args.data);
+        // Log the problematic areas
+        const nanMatches = args.data.match(/NaN/g);
+        if (nanMatches) {
+          console.debug('Found NaN values:', nanMatches.length);
+        }
+
+        const cleanedData = preprocessJsonString(args.data);
+        
+        // Verify the cleaning worked
+        if (cleanedData.includes('NaN')) {
+          console.error('NaN values still present after preprocessing');
+        }
+
+        const parsedData = JSON.parse(cleanedData);
         setUiTree(parsedData);
       } catch (error) {
+        console.error('Parse error:', {
+          message: error.message,
+          location: error.position,
+          context: args.data.substring(
+            Math.max(0, error.position - 100),
+            Math.min(args.data.length, error.position + 100)
+          )
+        });
         send({ error: `Failed to parse JSON: ${error.message}` });
       }
     }
