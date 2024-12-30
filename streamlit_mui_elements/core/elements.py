@@ -8,7 +8,7 @@ from streamlit_mui_elements.core.render import render_component
 
 ELEMENTS_FRAME_KEY = f"{__name__}.elements_frame"
 RERUN_COOLDOWN = 0.1
-RERUN_EVENT_TYPES = {'file-change', 'filter-change', 'sort-change', 'pagination-change', 'selection-change'}
+RERUN_EVENT_TYPES = {'file-change', 'filter-change', 'sort-change', 'pagination-change', 'selection-change', "click"}
 
 class ElementsManager:
     def __init__(self, key):
