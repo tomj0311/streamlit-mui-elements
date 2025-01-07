@@ -4,7 +4,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from streamlit_mui_elements import mui, elements
 import streamlit as st
-from datetime import datetime
+
+from streamlit_mui_elements.core.events import event_store
 
 skills_options = [
     "Python", "JavaScript", "React", "Java", "C++", "SQL", 
@@ -114,8 +115,14 @@ with elements("key2"):
                 )
 
         # Submit button
-        mui.Button("Submit", id="submit-button", variant="contained", color="primary", sx={"marginTop": "20px", "marginBottom": "10px", "float": "right"})
+        mui.Button("Submit", id="submit-button", type="submit", variant="contained", color="primary", sx={"marginTop": "20px", "marginBottom": "10px", "float": "right"})
 
 st.code("st.session_state.get('events')['id'] holds data from each frontend element.")
-if st.session_state.get("events"):
-    st.write(st.session_state["events"])
+print(event_store)
+if event_store.get("events"):
+    # Get the submit event and form events
+    events = event_store["events"]
+    if events.get("submitEvent"):
+        st.write("Form submitted!")
+        st.write("Submit event:", events["submitEvent"])
+        st.write("Form data:", events["formEvents"])

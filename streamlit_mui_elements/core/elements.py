@@ -5,15 +5,20 @@ from streamlit import session_state, rerun
 from streamlit_mui_elements.core.exceptions import ElementsFrameError
 from streamlit_mui_elements.core.element import Element
 from streamlit_mui_elements.core.render import render_component
+from streamlit_mui_elements.core.events import start_event_server, event_store
 
 ELEMENTS_FRAME_KEY = f"{__name__}.elements_frame"
 RERUN_COOLDOWN = 0.1
-RERUN_EVENT_TYPES = {'file-change', 'filter-change', 'sort-change', 'pagination-change', 'selection-change', "click"}
+RERUN_EVENT_TYPES = {'file-change', 'filter-change', 'sort-change', 'pagination-change', 'selection-change'}
 
 class ElementsManager:
     def __init__(self, key):
         self.key = f"{ELEMENTS_FRAME_KEY}.{key}"
         self.frame = None
+        # Start Flask server when ElementsManager is initialized
+        if not hasattr(ElementsManager, '_event_server_started'):
+            start_event_server()
+            ElementsManager._event_server_started = True
     
     def __enter__(self):
         self.frame = ElementsFrame(self.key)
@@ -35,57 +40,9 @@ class ElementsManager:
     
     def _handle_component(self, ui_tree):
         ui_description = json.dumps(ui_tree)
-        component = render_component(data=ui_description, key=self.key, default=None)
+        render_component(data=ui_description, key=self.key, default=None)
+        print(f"rendered component {self.key}") 
         
-        if component is not None and component != 0:
-            event_key = component.get('key')
-            value = component.get('value')
-            timestamp = component.get('timestamp')
-            event_type = component.get('type')
-            
-            if event_key and event_key != 'undefined':
-                self._update_event_state(event_key, value, timestamp, event_type)
-                if self._should_rerun(event_type, event_key, timestamp):
-                    self._trigger_rerun(event_key, timestamp)
-    
-    def _update_event_state(self, event_key, value, timestamp, event_type):
-        try:
-            if "events" not in session_state:
-                session_state.events = {}
-            
-            if session_state.events.get(event_key, {}).get('timestamp') == timestamp:
-                # Only in case of larage files
-                if session_state.events[event_key]["type"] == "file-change": 
-                    session_state.events[event_key]["value"]["result"] = None
-            else:
-                session_state.events[event_key] = {
-                    "value": value,
-                    "timestamp": timestamp,
-                    "type": event_type
-                }
-        except Exception as e:
-            print(f"Error updating event state: {str(e)}")
-    
-    def _should_rerun(self, event_type, event_key, timestamp):
-        if not event_type or event_type not in RERUN_EVENT_TYPES:
-            return False
-            
-        last_event = session_state.get('_last_processed_event', {})
-        if (last_event.get('key') == event_key and 
-            last_event.get('timestamp') == timestamp):
-            return False
-            
-        last_rerun = session_state.get('_last_rerun_time', 0)
-        return time.time() - last_rerun >= RERUN_COOLDOWN
-    
-    def _trigger_rerun(self, event_key, timestamp):
-        session_state._last_processed_event = {
-            'key': event_key,
-            'timestamp': timestamp
-        }
-        session_state._last_rerun_time = time.time()
-        rerun()
-
 def new_element(module, element):
     if ELEMENTS_FRAME_KEY not in session_state:
         raise ElementsFrameError("Cannot create element outside a frame.")

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Mousetrap from "mousetrap";
 import { ErrorBoundary } from "react-error-boundary";
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import { dequal } from "dequal/lite";
@@ -69,18 +68,31 @@ const createEventPayload = (key, type, value) => ({
   timestamp: Date.now()
 });
 
-const send = (data) => {
+const send = async (data) => {
   try {
     const sanitizedData = {
       ...data,
       value: sanitizeValue(data.value),
+      formEvents: data.formEvents ? sanitizeValue(data.formEvents) : null,
       timestamp: Date.now()
     };
     
-    // Queue microtask to ensure state is updated
-    queueMicrotask(() => {
+    // Send data to local event server if configured
+    const eventPort = 8500;
+    if (eventPort) {
+      await fetch(`http://localhost:${eventPort}/api/data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(sanitizedData)
+      });
+    }
+
+    // For form elements, only update Streamlit on submit
+    if (data.type === 'submit' || !data.key?.startsWith('form-')) {
       Streamlit.setComponentValue(sanitizedData);
-    });
+    }
     
   } catch (error) {
     console.error('Failed to serialize data:', error);
@@ -88,33 +100,6 @@ const send = (data) => {
       error: 'Failed to serialize component data',
       timestamp: Date.now()
     });
-  }
-};
-
-const handleEvent = (event, key, eventType) => {
-  try {
-    let value;
-    
-    // Handle different input types
-    switch (event?.target?.type) {
-      case 'checkbox':
-        value = event.target.checked;
-        break;
-      case 'radio':
-        value = event.target.value;
-        break;
-      case 'button':
-        value = 'clicked';
-        break;
-      default:
-        value = event?.target?.value;
-    }
-
-    send(createEventPayload(key, eventType, value));
-
-  } catch (error) {
-    console.error('Event handling error:', error);
-    send(createEventPayload(key, 'error', error.message));
   }
 };
 
@@ -154,72 +139,6 @@ const handleFileEvent = async (event, key) => {
   }
 };
 
-const createEventHandlers = (id, type, props) => {
-  const handlers = {};
-
-  if (!id) return handlers;
-
-  switch (type) {
-    case 'Autocomplete':
-      handlers.onChange = (event, value, selectionData) => {
-        send(createEventPayload(id, EVENT_TYPES.AUTOCOMPLETE_CHANGE, selectionData));
-      };
-      break;
-    
-    case 'Select':
-      handlers.onChange = (event, selectionData) => {
-        send(createEventPayload(id, EVENT_TYPES.SELECT_CHANGE, selectionData));
-      };
-      break;
-
-    case 'Input':
-      if (props?.type === 'file') {
-        // Special handling for file inputs to prevent double triggers
-        handlers.onChange = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          if (e?.target?.files?.length) {
-            // Don't send click event, only handle file
-            await handleFileEvent(e, id);
-            e.target.value = '';
-          }
-        };
-        // Remove other handlers for file input
-        handlers.onClick = (e) => {
-          e.stopPropagation();
-        };
-      } else {
-        handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE);
-        handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK);
-      }
-      break;
-    
-    case 'DataGrid':
-      // Always attach handlers for DataGrid
-      handlers.onFilterModelChange = (filterModel) => {
-        send(createEventPayload(id, EVENT_TYPES.FILTER_CHANGE, filterModel));
-      };
-      
-      handlers.onSortModelChange = (sortModel) => {
-        send(createEventPayload(id, EVENT_TYPES.SORT_CHANGE, sortModel));
-      };
-      
-      handlers.onPaginationModelChange = (paginationModel) => {
-        send(createEventPayload(id, EVENT_TYPES.PAGINATION_CHANGE, paginationModel));
-      };
-
-      break;
-
-    default:
-      handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK);
-      handlers.onBlur = (e) => handleEvent(e, id, EVENT_TYPES.BLUR);
-      handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE);
-  }
-
-  return handlers;
-};
-
 const evaluateFunction = (funcString) => {
   // Create a context with MUI components
   const context = {
@@ -227,31 +146,30 @@ const evaluateFunction = (funcString) => {
     React: React,
     createElement: React.createElement
   };
-  
+
+  // eslint-disable-next-line 
   const func = new Function(...Object.keys(context), `return ${funcString}`);
   return func(...Object.values(context));
 };
 
-const convertNode = (node) => {
+const convertNode = (node, renderElement) => {
   if (node === null || node === undefined) return node;
   if (typeof node !== "object") {
-    // Handle function strings
     if (typeof node === "string" && node.startsWith("(params)")) {
       return evaluateFunction(node);
     }
     return node;
   }
   if (Array.isArray(node)) {
-    return node.map(convertNode);
+    return node.map(n => convertNode(n, renderElement));
   }
   if (node.type && node.module) {
     return renderElement(node);
   }
 
-  // Plain object without type/module: recursively convert its values
   const newObj = {};
   for (const key in node) {
-    newObj[key] = convertNode(node[key]);
+    newObj[key] = convertNode(node[key], renderElement);
   }
   return newObj;
 };
@@ -266,47 +184,6 @@ const validateElement = (module, element) => {
     console.error(`Element "${element}" does not exist in module "${module}"`);
     throw new Error(`Element "${element}" does not exist in module "${module}"`);
   }
-};
-
-const renderElement = (node) => {
-  const { module, type, props = {}, children = [] } = node;
-
-  validateElement(module, type);
-  const LoadedElement = loaders[module](type);
-
-  const renderedChildren = children.map(convertNode);
-  const finalProps = { ...convertNode(props) };
-
-  // Special handling for file inputs
-  if (type === 'Input' && finalProps.type === 'file') {
-    finalProps.key = `file-input-${Date.now()}`;
-    // Prevent any default click behavior
-    finalProps.onClick = (e) => e.stopPropagation();
-  }
-
-  if (finalProps.id) {
-    const eventHandlers = createEventHandlers(finalProps.id, type, finalProps);
-    // For DataGrid, ensure we preserve any existing props
-    if (type === 'DataGrid') {
-      finalProps.components = {
-        ...finalProps.components,
-      };
-      // Merge handlers with existing props instead of overwriting
-      Object.entries(eventHandlers).forEach(([eventName, handler]) => {
-        if (handler) {
-          const existingHandler = finalProps[eventName];
-          finalProps[eventName] = (...args) => {
-            if (existingHandler) existingHandler(...args);
-            handler(...args);
-          };
-        }
-      });
-    } else {
-      Object.assign(finalProps, eventHandlers);
-    }
-  }
-
-  return jsx(LoadedElement, finalProps, ...renderedChildren);
 };
 
 const preprocessJsonString = (jsonString) => {
@@ -339,6 +216,151 @@ const preprocessJsonString = (jsonString) => {
 
 const ElementsApp = ({ args, theme }) => {
   const [uiTree, setUiTree] = useState([]);
+  const [formEvents, setFormEvents] = useState({});
+
+  const handleFormEvent = (eventData) => {
+    setFormEvents(prev => ({
+      ...prev,
+      [eventData.key]: eventData
+    }));
+  };
+
+  const handleEvent = async (event, key, eventType, props = {}) => {
+    try {
+      let value;
+      
+      switch (event?.target?.type) {
+        case 'checkbox':
+          value = event.target.checked;
+          break;
+        case 'radio':
+          value = event.target.value;
+          break;
+        case 'button':
+          value = 'clicked';
+          break;
+        default:
+          value = event?.target?.value;
+      }
+
+      const eventData = createEventPayload(key, eventType, value);
+
+      // Check if this element has type="submit"
+      if (props.type === 'submit') {
+        await send({
+          key,
+          type: props.type,
+          value,
+          formEvents
+        });
+        // setFormEvents({}); // Clear form events after submission
+      } else {
+        if (eventData.value !== undefined && eventData.value !== null && eventData.value !== '' && eventData.value !== "") {
+          handleFormEvent(eventData);
+        }
+      }
+
+    } catch (error) {
+      console.error('Event handling error:', error);
+      await send(createEventPayload(key, 'error', error.message));
+    }
+  };
+
+  const createEventHandlers = (id, type, props) => {
+    const handlers = {};
+
+    if (!id) return handlers;
+
+    switch (type) {
+      case 'Autocomplete':
+        handlers.onChange = (event, value, selectionData) => {
+          send(createEventPayload(id, EVENT_TYPES.AUTOCOMPLETE_CHANGE, selectionData));
+        };
+        break;
+      
+      case 'Select':
+        handlers.onChange = (event, selectionData) => {
+          send(createEventPayload(id, EVENT_TYPES.SELECT_CHANGE, selectionData));
+        };
+        break;
+
+      case 'Input':
+        if (props?.type === 'file') {
+          handlers.onChange = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e?.target?.files?.length) {
+              await handleFileEvent(e, id);
+              e.target.value = '';
+            }
+          };
+          handlers.onClick = (e) => {
+            e.stopPropagation();
+          };
+        } else {
+          handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE, props);
+          handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK, props);
+        }
+        break;
+      
+      case 'DataGrid':
+        handlers.onFilterModelChange = (filterModel) => {
+          send(createEventPayload(id, EVENT_TYPES.FILTER_CHANGE, filterModel));
+        };
+        
+        handlers.onSortModelChange = (sortModel) => {
+          send(createEventPayload(id, EVENT_TYPES.SORT_CHANGE, sortModel));
+        };
+        
+        handlers.onPaginationModelChange = (paginationModel) => {
+          send(createEventPayload(id, EVENT_TYPES.PAGINATION_CHANGE, paginationModel));
+        };
+        break;
+
+      default:
+        handlers.onClick = (e) => handleEvent(e, id, EVENT_TYPES.CLICK, props);
+        handlers.onChange = (e) => handleEvent(e, id, EVENT_TYPES.CHANGE, props);
+    }
+
+    return handlers;
+  };
+
+  const renderElement = (node) => {
+    const { module, type, props = {}, children = [] } = node;
+
+    validateElement(module, type);
+    const LoadedElement = loaders[module](type);
+
+    const renderedChildren = children.map(child => convertNode(child, renderElement));
+    const finalProps = { ...convertNode(props, renderElement) };
+
+    // Special handling for file inputs
+    if (type === 'Input' && finalProps.type === 'file') {
+      finalProps.key = `file-input-${Date.now()}`;
+      finalProps.onClick = (e) => e.stopPropagation();
+    }
+
+    if (finalProps.id) {
+      const eventHandlers = createEventHandlers(finalProps.id, type, finalProps);
+      if (type === 'DataGrid') {
+        finalProps.components = { ...finalProps.components };
+        Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+          if (handler) {
+            const existingHandler = finalProps[eventName];
+            finalProps[eventName] = (...args) => {
+              if (existingHandler) existingHandler(...args);
+              handler(...args);
+            };
+          }
+        });
+      } else {
+        Object.assign(finalProps, eventHandlers);
+      }
+    }
+
+    return jsx(LoadedElement, finalProps, ...renderedChildren);
+  };
 
   useEffect(() => {
     if (args.data) {
