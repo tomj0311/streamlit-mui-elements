@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="streamlit-mui-elements",
-    version="0.0.23",
+    version="0.0.24",
     author="Tom Jose",
     author_email="tomj0311@gmail.com",
     description="A Streamlit component for Material-UI elements",

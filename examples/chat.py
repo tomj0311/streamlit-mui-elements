@@ -1,5 +1,7 @@
-import time
-import uuid
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import streamlit as st
 from streamlit_mui_elements import mui, elements
 # from llm import get_completion
