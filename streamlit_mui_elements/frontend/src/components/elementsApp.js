@@ -89,10 +89,7 @@ const send = async (data) => {
       });
     }
 
-    // For form elements, only update Streamlit on submit
-    if (data.type === 'submit') {
-      Streamlit.setComponentValue(sanitizedData);
-    }
+    Streamlit.setComponentValue(sanitizedData);
     
   } catch (error) {
     console.error('Failed to serialize data:', error);
