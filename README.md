@@ -27,9 +27,11 @@ Dive into a comprehensive implementation of Material-UI components for Streamlit
 
 ## 💡 How It Works
 
-All component callbacks are automatically stored in `st.session_state["events"]`. Access individual component states using their respective IDs with ease.
+All component callbacks are automatically stored in **from streamlit_mui_elements.core.events import event_store.
 
-If id="some_id" is not mentioned for a component it's events won'be be captured.
+To force rerun use type=submit with your respective elements ,this is to avoid unwanted reruns while UI elemnts are changed.
+
+If id="some_id" is not mentioned for a component, it's events won'be be captured.
 
 ## 🎥 Demo
 
