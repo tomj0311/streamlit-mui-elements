@@ -21,10 +21,8 @@ class DataHandler(tornado.web.RequestHandler):
 
     def post(self):
         data = json.loads(self.request.body)
-        key = data.get('key')
-        if key:
-            event_store[key] = data
-            self.write({"status": "success", "message": f"Data stored for key: {key}"})
+        if data:
+            event_store["events"] = data
         else:
             self.set_status(400)
             self.write({"status": "error", "message": "No key provided"})

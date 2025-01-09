@@ -2,22 +2,6 @@ import { useEffect, useState } from "react";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { alpha, darken, lighten } from '@mui/material/styles';
 
-// Remove the generateTonalPalette function as we'll use MUI's built-in color generation
-
-const isPaletteColor = (color) => {
-  return typeof color === 'string' && color.includes('.');
-};
-
-const getPaletteColor = (theme, colorString) => {
-  if (!isPaletteColor(colorString)) return colorString;
-  
-  const [palette, shade] = colorString.split('.');
-  const paletteObj = theme.palette[palette];
-  
-  if (!paletteObj) return colorString;
-  return paletteObj[shade] || colorString;
-};
-
 const generateColorShades = (mainColor, isSecondary = false) => {
   const shades = {};
   

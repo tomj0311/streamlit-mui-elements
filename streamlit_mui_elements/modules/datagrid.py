@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from streamlit_mui_elements.modules.mui import mui  # Changed import statement
+from streamlit_mui_elements.core.events import event_store
 
 def data_grid(df: pd.DataFrame):
     """Create a MUI DataGrid with server-side pagination, sorting, and filtering."""
@@ -25,7 +26,7 @@ def data_grid(df: pd.DataFrame):
     processed_df = df.copy()
 
     # Handle grid events with deduplication
-    grid_event = st.session_state.get("events", {}).get("data-grid", {})
+    grid_event = event_store.get("data-grid", {})
     if grid_event:
         current_event = (grid_event.get('type'), str(grid_event.get('value')))
         

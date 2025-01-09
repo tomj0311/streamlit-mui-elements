@@ -52,7 +52,6 @@ export const createAutocompleteComponent = (module) => props => {
 export const createSelectComponent = (module) => props => {
   const {
     onChange,
-    options = [],
     value,
     children,
     ...rest

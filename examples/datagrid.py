@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import gc
 import streamlit as st
 from streamlit_mui_elements import mui, elements, data_grid
@@ -34,9 +38,6 @@ def datagrid():
                         "Upload a CSV file to display data",
                         sx={"textAlign": "center"}
                     )
-
-    if st.session_state.get("events"):
-        st.write(st.session_state["events"])
 
 if __name__ == "__main__":
     datagrid()

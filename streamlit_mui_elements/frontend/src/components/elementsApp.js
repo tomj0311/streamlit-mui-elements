@@ -90,7 +90,7 @@ const send = async (data) => {
     }
 
     // For form elements, only update Streamlit on submit
-    if (data.type === 'submit' || !data.key?.startsWith('form-')) {
+    if (data.type === 'submit') {
       Streamlit.setComponentValue(sanitizedData);
     }
     
@@ -221,7 +221,10 @@ const ElementsApp = ({ args, theme }) => {
   const handleFormEvent = (eventData) => {
     setFormEvents(prev => ({
       ...prev,
-      [eventData.key]: eventData
+      [eventData.key]: {
+        id: eventData.key,
+        value: eventData.value
+      }
     }));
   };
 
@@ -243,8 +246,6 @@ const ElementsApp = ({ args, theme }) => {
           value = event?.target?.value;
       }
 
-      const eventData = createEventPayload(key, eventType, value);
-
       // Check if this element has type="submit"
       if (props.type === 'submit') {
         await send({
@@ -253,10 +254,12 @@ const ElementsApp = ({ args, theme }) => {
           value,
           formEvents
         });
-        // setFormEvents({}); // Clear form events after submission
       } else {
-        if (eventData.value !== undefined && eventData.value !== null && eventData.value !== '' && eventData.value !== "") {
-          handleFormEvent(eventData);
+        if (value !== undefined && value !== null && value !== '') {
+          handleFormEvent({
+            key,
+            value
+          });
         }
       }
 
@@ -274,13 +277,27 @@ const ElementsApp = ({ args, theme }) => {
     switch (type) {
       case 'Autocomplete':
         handlers.onChange = (event, value, selectionData) => {
-          send(createEventPayload(id, EVENT_TYPES.AUTOCOMPLETE_CHANGE, selectionData));
+          if (props.type === 'submit') {
+            send({ key: id, type: props.type, value: selectionData });
+          } else {
+            handleFormEvent({
+              key: id,
+              value: selectionData
+            });
+          }
         };
         break;
       
       case 'Select':
         handlers.onChange = (event, selectionData) => {
-          send(createEventPayload(id, EVENT_TYPES.SELECT_CHANGE, selectionData));
+          if (props.type === 'submit') {
+            send({ key: id, type: props.type, value: selectionData });
+          } else {
+            handleFormEvent({
+              key: id,
+              value: selectionData
+            });
+          }
         };
         break;
 

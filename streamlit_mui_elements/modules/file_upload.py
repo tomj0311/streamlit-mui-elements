@@ -4,6 +4,7 @@ import base64
 import pandas as pd
 import streamlit as st
 from streamlit_mui_elements.modules.mui import mui
+from streamlit_mui_elements.core.events import event_store
 from typing import Union, List
 
 def file_upload(extensions: Union[str, List[str]] = ".csv", multiple: bool = False, key: str = "file_upload"):
@@ -46,16 +47,15 @@ def handle_upload(extensions: Union[str, List[str]] = ".csv", key: str = "file_u
     if isinstance(extensions, str):
         extensions = [extensions]
         
+    df, filename = None, None
+    file_event = event_store.get(key, {})
+
     if key not in st.session_state:
         st.session_state[key] = {
             'last_processed_file': None,
             'file_processed': False,
             'cached_df': None
         }
-
-    df, filename = None, None
-    events = st.session_state.get("events", {})
-    file_event = events.get(key, {})
 
     if file_event:
         try:
